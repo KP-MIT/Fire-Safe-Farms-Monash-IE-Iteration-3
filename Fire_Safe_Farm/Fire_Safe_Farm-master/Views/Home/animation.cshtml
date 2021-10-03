@@ -1,0 +1,486 @@
+﻿
+@{
+    Layout = "~/Views/Shared/map_ani_layout.cshtml";
+}
+
+
+<html>
+<head>
+
+    <link href="~/Content/jdstyle.css" rel="stylesheet" />
+</head>
+
+<body>
+
+
+
+    <div class="farm" id="farm" style="width:100%;">
+        <div class="model" id="model" style="width:100%">
+            <canvas id="number" width="10240" height="10240"> </canvas>
+        </div>
+
+    </div>
+
+    @*  <div style="float:right; width:35%; background-color:#333333;height:100%;position:absolute; top:100px;right:100px">
+            <div id="info" style="max-height:700px">
+                <h1 class="header_item">Click on item to see the details</h1>
+            </div>
+        </div>*@
+
+    <div id="info" style="position:absolute; right:50px;top:120px;width:33%;background-color:#ffffffcc;min-height:600px;border-radius:30px;max-height:fit-content();backdrop-filter:blur(5px);padding-bottom:2%;">
+        <h4 style="font-family:Roboto-light;color:black;text-align:center;padding:5%;font-weight:400;">Click on item to see the details</h4>
+    </div>
+
+    <style>
+
+        .btn {
+            background-color: #ffffff30 !important;
+            border-radius: 2.5rem !important;
+        }
+
+            .btn:hover {
+                background-color: #e5af7c !important;
+                border-color: #ffffff30 !important;
+            }
+
+        .btn-info {
+            border-color: #ffffff40 !important;
+        }
+    </style>
+    <style>
+        ::-webkit-scrollbar {
+            width: 20px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background-color: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #d6dee1;
+            border-radius: 20px;
+            border: 6px solid transparent;
+            background-clip: content-box;
+        }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background-color: #a8bbbf;
+            }
+    </style>
+    <style>
+
+        .btn2 {
+            background-color: #e5af7c !important;
+            border-radius: 2.5rem !important;
+            padding:2%;
+            
+        }
+
+
+    </style>
+
+
+    <!--defining style for annotation and canvas-->
+    <style type="text/css">
+
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: inline-flex;
+        }
+
+        .header_item {
+            color: black;
+            font-family: Roboto-light;
+            font-size: 35px;
+            text-align: center;
+            padding: 5%;
+            padding-bottom: 1%;
+            padding-top: 10%;
+        }
+
+        .text {
+            color: black;
+            font-family: Roboto-light;
+            font-size: 15px;
+            text-align: justify;
+            padding: 5%;
+            padding-top: 1%;
+            padding-bottom: 1%;
+        }
+
+
+
+        .text_min {
+            color: black;
+            font-family: Roboto-light;
+            font-size: 20px;
+            text-align: justify;
+            padding: 5%;
+            padding-bottom: 1%;
+        }
+
+        #info {
+            margin-left: 10%;
+            margin-right: 2%;
+            overflow-y: auto;
+            max-height: 60%;
+        }
+
+        #number {
+            position: absolute;
+            z-index: -1;
+        }
+    </style>
+    <!--Three js module -->
+    <script type="module">
+        import * as THREE from 'https://threejs.org/build/three.module.js';
+        import { RoomEnvironment } from 'https://threejs.org/examples/jsm/environments/RoomEnvironment.js';
+        import { OrbitControls } from 'https://threejs.org/examples/jsm/controls/OrbitControls.js';
+        import { GLTFLoader } from 'https://threejs.org/examples/jsm/loaders/GLTFLoader.js';
+        import { MeshoptDecoder } from 'https://threejs.org/examples/jsm/libs/meshopt_decoder.module.js';
+
+        // store element id in constant
+        let camera, scene, renderer;
+        const popup = document.getElementById("popup_id");
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const scaleX = 1;
+        const scaleY = 1;
+
+        init();
+
+
+        // main function//
+        function init() {
+            const container = document.getElementById('model')
+
+            const canvas = document.getElementById("number");
+            const ctx = canvas.getContext("2d");
+            const x = 5120;
+            const y = 5120;
+            const radius = 2560;
+            const startAngle = 0;
+            const endAngle = Math.PI * 2;
+
+            ctx.fillStyle = "#0d0d0d";    // sprite texture
+            ctx.beginPath();
+            ctx.arc(x, y, radius, startAngle, endAngle);
+            ctx.fill();
+            ctx.opacity = 0.1;
+
+            ctx.strokeStyle = "rgb(255, 255, 255)";
+            ctx.lineWidth = 300;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, startAngle, endAngle);
+            ctx.stroke();
+
+            ctx.fillStyle = "rgb(255, 255, 255)";
+            ctx.font = "5120px roboto-light";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("+", x, y);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize((window.innerWidth * scaleX ), (window.innerHeight * scaleY ));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            container.appendChild(renderer.domElement);
+
+            camera = new THREE.PerspectiveCamera(65, (window.innerWidth * scaleX) / (window.innerHeight * scaleY), 0.1, 1500);
+            camera.position.set(500, 100, 10);
+            
+
+            const environment = new RoomEnvironment();
+            const pmremGenerator = new THREE.PMREMGenerator(renderer);
+
+            scene = new THREE.Scene();
+            scene.translateZ(85);
+            scene.translateY(-20);
+            console.log(scene.position);
+            scene.background = new THREE.Color("#87CEFA");
+            scene.environment = pmremGenerator.fromScene(environment).texture;
+
+
+            const loader = new GLTFLoader().setPath('/3dmodel/');
+
+            loader.setMeshoptDecoder(MeshoptDecoder);
+            loader.load('scene.gltf', function (gltf) {
+                scene.add(gltf.scene);
+                render();
+
+            });
+
+            //select canvas from tag id
+            const numberTexture = new THREE.CanvasTexture(
+                document.querySelector('#number')
+            );
+
+            const spriteMaterial = new THREE.SpriteMaterial({
+                map: numberTexture,
+                alphaTest: 0.7,
+                transparent: true,
+                depthTest: false,
+                depthWrite: false,
+            });
+
+            // defining sprite locations
+            var livestock = new THREE.Sprite(spriteMaterial);
+            livestock.position.set(1, 7, 28);
+            livestock.scale.set(24, 24, 1);
+            livestock.material.opacity = 0.9;
+            livestock.name = "livestock";
+            scene.add(livestock);
+
+            var crop = new THREE.Sprite(spriteMaterial);
+            crop.position.set(38, 10, 61);
+            crop.scale.set(24, 24, 1);
+            crop.material.opacity = 0.9;
+            crop.name = "crop";
+            scene.add(crop);
+
+            var house = new THREE.Sprite(spriteMaterial);
+            house.position.set(-30, 35, 0);
+            house.scale.set(24, 24, 1);
+            house.material.opacity = 0.9;
+            house.name = "house";
+            scene.add(house);
+
+            var tree = new THREE.Sprite(spriteMaterial);
+            tree.position.set(-25, 20, 35);
+            tree.scale.set(24, 24, 1);
+            tree.material.opacity = 0.9;
+            tree.name = "tree";
+            scene.add(tree);
+
+            var hay = new THREE.Sprite(spriteMaterial);
+            hay.position.set(-20, 10, -30);
+            hay.scale.set(24, 24, 1);
+            hay.material.opacity = 0.9;
+            hay.name = "hay";
+            scene.add(hay);
+
+            var machine = new THREE.Sprite(spriteMaterial);
+            machine.position.set(15, 14, -70);
+            machine.scale.set(24, 24, 1);
+            machine.material.opacity = 0.9;
+            machine.name = "machine";
+            scene.add(machine);
+
+
+
+            // orbital controls or camera controls
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.addEventListener('change', render);
+            controls.enableZoom = true;
+            controls.enableRotate = false;
+            controls.minDistance = 10;
+            controls.maxDistance = 250;
+            controls.target.set(0, 0, 0);
+            controls.update();
+
+            window.addEventListener('resize', onWindowResize, false);
+            renderer.domElement.addEventListener('click', onClick, false);
+
+        }
+
+        // functions
+        function onWindowResize() {
+
+            camera.aspect = (window.innerWidth * scaleX) / (window.innerHeight * scaleY);
+            camera.updateProjectionMatrix();
+
+            renderer.setSize((window.innerWidth * scaleX), (window.innerHeight * scaleY));
+            render();
+        }
+
+        function onClick(event) {
+
+            event.preventDefault();
+
+            mouse.x = (event.clientX / ((window.innerWidth * scaleX))) * 2 - 1;
+            mouse.y = -(event.clientY / ((window.innerHeight * scaleY))) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            var intersects = raycaster.intersectObjects(scene.children.slice(0, 6), true);
+
+            if (intersects.length > 0) {
+                console.log('Intersection:', intersects[0].object.name);
+                renderText(intersects[0].object.name);
+
+            }
+        }
+
+        // render function  making vector and positioning on screen
+        function render() {
+            renderer.render(scene, camera);
+        }
+
+        function renderText(itemName) {
+            if (itemName == "tree") {
+                document.getElementById("info").innerHTML = "<h1 class='header_item'>Trees and Other Vegetation</h1>" + "</br>" +
+                    "<p class='text'>Vegetation should be planned well around your property to protect it from the danger of bushfire. Sometimes you require a planning permit to cut down or burn off the vegetation. The given instructions provides certainty to landowners and residents at risk from bushfire so that vegetation can be cleared and the property maintained in a fire-ready condition. Follwing rules apply for residents living in bushfire prone areas.</p>" + "</br></br>" +
+                    "<ol class='text'>" +
+                    "<li><b>10m Rule:</b></br>This allows land owners and residents to clear any vegetation around 10m radious of the accomodation.</br></br></li>" +
+                    "<li><b>30m Rule:</b></br>This allows land owners and residents to clear any vegetation except trees around 30m radious of the accomodation.</br></br></li>" +
+                    "<li><b>50m Rule:</b></br>This allows land owners and residents to clear any vegetation except trees within 60m radious of the accomodation.</br></br></li>" +
+                    "</ol >"
+                var x = document.createElement("a");
+                x.setAttribute("id", "infohref");
+                x.setAttribute("class", "btn2");
+
+                x.setAttribute("href", "@Url.Action("Recovery","Home")");
+                x.innerHTML = "Click to Check Recovery Guideline";
+                document.getElementById("info").appendChild(x);
+            }
+
+            else if (itemName == "hay") {
+                document.getElementById("info").innerHTML = "<h1 class='header_item'>Haystacks</h1>" + "</br>" +
+                    "<p class='text'>Haystask fires can be caused by, </p>" +
+                    "<ol class='text'>" +
+                    "<li><b>A spark from machinary equipment:</b></br>As hays are dry and already high in temperature from inside, they are good source of fuel for fire. When one keeps the hay and machinary together, then there are chances of fire in hay due to accidential sparks in machinary.</br></br></li>" +
+                    "<li><b>Embers coming from nearby fires:</b></br>Embers of nearby fires can act as a ignition to start a fire elsewhere. Hays already being hot are combustable and more prone to fire.</br></br></li>" +
+                    "<li><b>Spontaneous ignition:</b></br>Spontaneous ignition is the major cause of heystack fires in Victoria. This can happen if the hay becomes damp before, during or after the baling or baled when its still green. It causes a complex chemical reaction inside haystack rising the temperature of hay from inside and as it reaches certain point (180 degree C) can burst into spontaneous ignitions.</br></br></li>" +
+                    "</ol>" +
+                    "</br>" +
+                    "<p class='text_min'>What you need to do?</p>" +
+                    "<ul class='text'>" +
+                    "<li>Ensure you follow right procedures for baling and store them at correct moisture level.</li>" +
+                    "<li>Protect your hay from getting wet due to rain or any other water leakage.</li>" +
+                    "<li>Use hay caps to cover your hay to protect it from getting moist or from ember attack.</li>" +
+                    "<li>Store away hays in different locations around your farm to reduce the impact of loss.</li>" +
+                    "<li>Keep your machinary away from haystacks as much as possible.</li>" +
+                    "<li>Create wide fuel breaks around haystacks</li>" +
+                    "<li>Regularly check haystacks for any signs of heating.</li>" +
+                    "</ul>"
+                var x = document.createElement("a");
+                x.setAttribute("id", "infohref");
+                x.setAttribute("class", "btn2");
+
+                x.setAttribute("href", "@Url.Action("Recovery","Home")");
+                x.innerHTML = "Click to Check Recovery Guideline";
+                document.getElementById("info").appendChild(x);
+
+            }
+
+            else if (itemName == "machine") {
+                document.getElementById("info").innerHTML = "<h1 class='header_item'>Vehicles and Machinary</h1>" + "</br>" +
+                    "<p class='text'>Machinary can be one of the causes of strating fires in your farm. On hot, dry and windy days, be very careful while harvesting, grinding, slashing or mowing.</p>" +
+                    "<p class='text'>Most commmon cause of of fire while harvesting is due to the machineary. Materials collecting on hot engine components such as manifold, exhaust and turbocharger can be a starter for fire. Therefore, avoid driving any vehicles and machinary thorugh dry grass.</p>" +
+                    "</br>" +
+                    "<p class='text_min'>What you need to do?</p>" +
+                    "<ul class='text'>" +
+                    "<li>Regularly make sure the machinary is clean and in good working condition</li>" +
+                    "<li>Check and assess the weather conditions especially strong winds and temperature while harvesting</li>" +
+                    "<li>Keep a fire safety kit nearby. Equip your vehicle with atleast 2 fire extinguishers</li>" +
+                    "<li>Make sure to take regular breaks for machinary to cool down while harvesting.</li>" +
+                    "<li>While cutting and grinding make sure to use fire rststent sheilds to stop sparks </li>" +
+                    "<li>Do not use any machinary on total fire ban days</li>" +
+                    "</ul>"
+                var x = document.createElement("a");
+                x.setAttribute("id", "infohref");
+                x.setAttribute("class", "btn2");
+
+                x.setAttribute("href", "@Url.Action("Recovery","Home")");
+                x.innerHTML = "Click to Check Recovery Guideline";
+                document.getElementById("info").appendChild(x);
+
+            }
+
+            else if (itemName == "crop") {
+                document.getElementById("info").innerHTML = "<h1 class='header_item'>Crops</h1>" + "</br>" +
+                    "<p class='text'>Crops in the farm are biggest asset to an arable crop farmer. Crops such as wheat and barley are most prone to fires when they are grown and ready to be harvested. Therefore, during bushfire season, when fire starts they can easily catch fire and can cause damage. It is important to perform cleaning and mowing in the farm on regular basis. Whatever the debris is collected should be cleared out. It is importnat to add fuel breaks around the farm, therefore even if fire starts somwhere, you won't loose everything.</p>" +
+                    "<p class='text'>Burn off is a good way for fuel management in farms. If you decide to do burn off, you should seek permission from emergency services and report any incident immediately. There are certain regions which has fire bans imposed. In these regions you can't start a fire withour proper authorisation. Check the following links for application.</p>" +
+                    "<p class='text'>It is importnt to clear out the vegetation around the fence. This clearance must not exceed 4m in total from both side of fence except when vegetation on the one side is cleared by more than 4m on one side.</p>"
+                "</br>" +
+                    "<p class='text_min'>What you need to do?</p>" +
+                    "<ul class='text'>" +
+                    "<li> Do fuel managemnet by clearing debris and dry leaves on the farm and performing burn offs.</li>" +
+                    "<li>Perform regular mowing around farm</li>" +
+                    "<li>Keep sufficient gap between fences and crops </li>" +
+                    "<li>Add fuel gaps within farms to the damage can be restricted to certain area</li>" +
+                    "<button id='btn' name='btn' style='font-size:30px'>Button</button>" +
+                    "</ul>"
+                var x = document.createElement("a");
+                x.setAttribute("id", "infohref");
+                x.setAttribute("class", "btn2");
+
+                x.setAttribute("href", "@Url.Action("Recovery","Home")");
+                x.innerHTML = "Click to Check Recovery Guideline";
+                document.getElementById("info").appendChild(x);
+
+
+            }
+
+            else if (itemName == "livestock") {
+                document.getElementById("info").innerHTML = "<h1 class='header_item'>Livestocks</h1>" + "</br>" +
+                    "<p class='text'>You can do a lot more to save the animals on the farm. When prepared well, you can save there lives. During bushfires, if no taken care of animals can panic and suffer injuries which may even result in their deaths. Some of the animals, like horses have a good insticts to avoid fire while when weather gets hot, sheeps are always reluctatnt to go. You have to make specific arrangemnets based on the animals you own to protect them in bushfire season.</p>" +
+                    "</br>" +
+                    "<p class='text_min'>What you need to do?</p>" +
+                    "<ul class='text'>" +
+                    "<li> Create green paddocks away from the farms with sufficient space and food and water supplies for animals. </li>" +
+                    "<li>Do not enclose animals especially horses in the confined space. Horses have good ability to avoid fire given ample of space.</li>" +
+                    "<li>Prepare route for evacuation before fire season and train your animals accordingly. It is always difficult to handle a panic animal. </li>" +
+                    "<li>Keep the external gates closed so animals dont go on run and damage themselves due to poor vision.</li>" +
+                    "</ul>"
+                var x = document.createElement("a");
+                x.setAttribute("id", "infohref");
+                x.setAttribute("class", "btn2");
+
+                x.setAttribute("href", "@Url.Action("Recovery","Home")");
+                x.innerHTML = "Click to Check Recovery Guideline";
+                document.getElementById("info").appendChild(x);
+
+            }
+
+            else if (itemName == "house") {
+                document.getElementById("info").innerHTML = "<h1 class='header_item'>House</h1>" + "</br>" +
+                    "<p class='text'>Protecting your property is very important during bushfire. When it comes to house safety, you can do a lot more. The following list items and their  certain measures taken with them can help you protect your house during bushfire.</p>" +
+                    "<p class='text'>You can do a lot more to save the animals on the farm. When prepared well, you can save there lives. During bushfires, if no taken care of animals can panic and suffer injuries which may even result in their deaths. Some of the animals, like horses have a good insticts to avoid fire while when weather gets hot, sheeps are always reluctatnt to go. You have to make specific arrangemnets based on the animals you own to protect them in bushfire season.</p>" +
+                    "</br>" +
+                    "<p class='text_min'>What you need to do?</p>" +
+                    "<ol class='text', type='1'>" +
+                    "<li><b>Roof:</b>" +
+                    "<ul class='text'><li>Use fire resistent sarking under the roofs to prevent bushfire damagning and coming from your roof</li><li>Seal the roof gaps using compressed minaral wool insulation</li></ul>" +
+                    "</li > " +
+                    "<li><b>Windows:</b>" +
+                    "<ul class='text'><li>Use shutters on windows to tightly close them and prevent fire from coming inside</li><li>Seal the gaps in windows and its borders</li><li>Maintain window sills so they don't have any flaking paint</li></ul>" +
+                    "</li>" +
+                    "<li><b>Doors:</b>" +
+                    "<ul class='text'><li>Avoid wooden doors. Insead use metal ones.</li><li>Seal the gaps around door frame</li></ul>" +
+                    "</li>" +
+                    "<li><b>Decks:</b>" +
+                    "<ul class='text'><li>Make decks out of concrete material or metal</li><li>Add some gaps between decking materials</li><li>Leep it seperate from dwellings</li></ul>" +
+                    "</li>" +
+                    "</ul>"
+                var x = document.createElement("a");
+                x.setAttribute("id", "infohref");
+                x.setAttribute("class", "btn2");
+
+                x.setAttribute("href", "@Url.Action("Recovery","Home")");
+                x.innerHTML = "Click to Check Recovery Guideline";
+                document.getElementById("info").appendChild(x);
+            }
+
+
+        }
+    </script>
+    <style>
+        #infohref {
+            font-size:15px;
+            font-family:Roboto-light;
+            color:white;
+            text-align: center;
+            text-decoration: none;
+            justify-content: center;
+            margin-left: 30%;
+        }
+    </style>
+</body>
+
+</html>
